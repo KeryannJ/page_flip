@@ -5,17 +5,23 @@ import 'package:flutter/material.dart';
 import '../page_flip.dart';
 
 class PageFlipWidget extends StatefulWidget {
-  const PageFlipWidget({
-    Key? key,
-    this.duration = const Duration(milliseconds: 450),
-    this.cutoffForward = 0.8,
-    this.cutoffPrevious = 0.1,
-    this.backgroundColor = Colors.white,
-    required this.children,
-    this.initialIndex = 0,
-    this.lastPage,
-    this.isRightSwipe = false,
-  })  : assert(initialIndex < children.length, 'initialIndex cannot be greater than children length'),
+  const PageFlipWidget(
+      {Key? key,
+      this.duration = const Duration(milliseconds: 450),
+      this.cutoffForward = 0.8,
+      this.cutoffPrevious = 0.1,
+      this.backgroundColor = Colors.white,
+      required this.children,
+      this.initialIndex = 0,
+      this.lastPage,
+      this.isRightSwipe = false,
+      this.onPageChanged,
+      this.onPrevPage,
+      this.onNextPage,
+      this.onJump,
+      this.onLastPageReached})
+      : assert(initialIndex < children.length,
+            'initialIndex cannot be greater than children length'),
         super(key: key);
 
   final Color backgroundColor;
@@ -26,12 +32,18 @@ class PageFlipWidget extends StatefulWidget {
   final double cutoffForward;
   final double cutoffPrevious;
   final bool isRightSwipe;
+  final Function(int newIndex)? onPageChanged;
+  final Function(int newIndex)? onPrevPage;
+  final Function(int newIndex)? onNextPage;
+  final Function(int jumpSize, int newIndex)? onJump;
+  final Function()? onLastPageReached;
 
   @override
   PageFlipWidgetState createState() => PageFlipWidgetState();
 }
 
-class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderStateMixin {
+class PageFlipWidgetState extends State<PageFlipWidget>
+    with TickerProviderStateMixin {
   int pageNumber = 0;
   List<Widget> pages = [];
   final List<AnimationController> _controllers = [];
@@ -109,9 +121,13 @@ class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderState
     currentWidget.value = Container();
     final ratio = details.delta.dx / dimens.maxWidth;
     if (_isForward == null) {
-      if (widget.isRightSwipe ? details.delta.dx < 0.0 : details.delta.dx > 0.0) {
+      if (widget.isRightSwipe
+          ? details.delta.dx < 0.0
+          : details.delta.dx > 0.0) {
         _isForward = false;
-      } else if (widget.isRightSwipe ? details.delta.dx > 0.2 : details.delta.dx < -0.2) {
+      } else if (widget.isRightSwipe
+          ? details.delta.dx > 0.2
+          : details.delta.dx < -0.2) {
         _isForward = true;
       } else {
         _isForward = null;
@@ -122,7 +138,9 @@ class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderState
       final pageLength = pages.length;
       final pageSize = widget.lastPage != null ? pageLength : pageLength - 1;
       if (pageNumber != pageSize && !_isLastPage) {
-        widget.isRightSwipe ? _controllers[pageNumber].value -= ratio : _controllers[pageNumber].value += ratio;
+        widget.isRightSwipe
+            ? _controllers[pageNumber].value -= ratio
+            : _controllers[pageNumber].value += ratio;
       }
     }
   }
@@ -130,7 +148,8 @@ class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderState
   Future _onDragFinish() async {
     if (_isForward != null) {
       if (_isForward == true) {
-        if (!_isLastPage && _controllers[pageNumber].value <= (widget.cutoffForward + 0.15)) {
+        if (!_isLastPage &&
+            _controllers[pageNumber].value <= (widget.cutoffForward + 0.15)) {
           await nextPage();
         } else {
           if (!_isLastPage) {
@@ -138,7 +157,8 @@ class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderState
           }
         }
       } else {
-        if (!_isFirstPage && _controllers[pageNumber - 1].value >= widget.cutoffPrevious) {
+        if (!_isFirstPage &&
+            _controllers[pageNumber - 1].value >= widget.cutoffPrevious) {
           await previousPage();
         } else {
           if (_isFirstPage) {
@@ -171,9 +191,20 @@ class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderState
     }
 
     if (_isLastPage) {
+      if (widget.onLastPageReached != null) {
+        widget.onLastPageReached!;
+      }
       currentPageIndex.value = pageNumber;
       currentWidget.value = pages[pageNumber];
       return;
+    }
+
+    if (widget.onPageChanged != null) {
+      widget.onPageChanged!(pageNumber);
+    }
+
+    if (widget.onNextPage != null) {
+      widget.onNextPage!(pageNumber);
     }
   }
 
@@ -183,6 +214,12 @@ class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderState
       setState(() {
         pageNumber--;
       });
+    }
+    if (widget.onPageChanged != null) {
+      widget.onPageChanged!(pageNumber);
+    }
+    if (widget.onPrevPage != null) {
+      widget.onPrevPage!(pageNumber);
     }
     currentPageIndex.value = pageNumber;
     currentWidget.value = pages[pageNumber];
@@ -206,6 +243,21 @@ class PageFlipWidgetState extends State<PageFlipWidget> with TickerProviderState
         }
       }
     }
+
+    if (_isLastPage) {
+      if (widget.onLastPageReached != null) {
+        widget.onLastPageReached!;
+      }
+    }
+
+    if (widget.onPageChanged != null) {
+      widget.onPageChanged!(pageNumber);
+    }
+
+    if (widget.onJump != null) {
+      widget.onJump!(currentPageIndex.value - pageNumber, pageNumber);
+    }
+
     currentPageIndex.value = pageNumber;
     currentWidget.value = pages[pageNumber];
     currentPage.value = pageNumber;
