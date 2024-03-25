@@ -100,6 +100,7 @@ class PageFlipWidgetState extends State<PageFlipWidget>
       goToPage(pageNumber);
     } else {
       pageNumber = widget.initialIndex;
+      goToPage(pageNumber);
       lastPageLoad = pages.length < 3 ? 0 : 3;
     }
     if (widget.initialIndex != 0) {
@@ -190,13 +191,24 @@ class PageFlipWidgetState extends State<PageFlipWidget>
       currentWidget.value = pages[pageNumber];
     }
 
+    // we only call one of the 2 events depending on the user choice
+    // because as I saw during testing i can't call onNextPage even if
+    // onLastPageReached is not implemented
     if (_isLastPage) {
       if (widget.onLastPageReached != null) {
         widget.onLastPageReached!;
+      } else {
+        if (widget.onNextPage != null) {
+          widget.onNextPage!(pageNumber);
+        }
       }
       currentPageIndex.value = pageNumber;
       currentWidget.value = pages[pageNumber];
       return;
+    } else {
+      if (widget.onNextPage != null) {
+        widget.onNextPage!(pageNumber);
+      }
     }
 
     if (widget.onPageChanged != null) {
@@ -255,7 +267,7 @@ class PageFlipWidgetState extends State<PageFlipWidget>
     }
 
     if (widget.onJump != null) {
-      widget.onJump!(currentPageIndex.value - pageNumber, pageNumber);
+      widget.onJump!(pageNumber - currentPageIndex.value, pageNumber);
     }
 
     currentPageIndex.value = pageNumber;
