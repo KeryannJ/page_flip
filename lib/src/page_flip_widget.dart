@@ -186,31 +186,6 @@ class PageFlipWidgetState extends State<PageFlipWidget>
       });
     }
 
-    if (pageNumber < pages.length) {
-      currentPageIndex.value = pageNumber;
-      currentWidget.value = pages[pageNumber];
-    }
-
-    // we only call one of the 2 events depending on the user choice
-    // because as I saw during testing i can't call onNextPage even if
-    // onLastPageReached is not implemented
-    if (_isLastPage) {
-      if (widget.onLastPageReached != null) {
-        widget.onLastPageReached!;
-      } else {
-        if (widget.onNextPage != null) {
-          widget.onNextPage!(pageNumber);
-        }
-      }
-      currentPageIndex.value = pageNumber;
-      currentWidget.value = pages[pageNumber];
-      return;
-    } else {
-      if (widget.onNextPage != null) {
-        widget.onNextPage!(pageNumber);
-      }
-    }
-
     if (widget.onPageChanged != null) {
       widget.onPageChanged!(pageNumber);
     }
@@ -218,6 +193,12 @@ class PageFlipWidgetState extends State<PageFlipWidget>
     if (widget.onNextPage != null) {
       widget.onNextPage!(pageNumber);
     }
+
+    if (widget.onLastPageReached != null) {
+      widget.onLastPageReached!;
+    }
+    currentPageIndex.value = pageNumber;
+    currentWidget.value = pages[pageNumber];
   }
 
   Future previousPage() async {
