@@ -173,7 +173,6 @@ class PageFlipWidgetState extends State<PageFlipWidget>
         }
       }
     }
-
     _isForward = null;
     currentPage.value = -1;
   }
@@ -219,34 +218,47 @@ class PageFlipWidgetState extends State<PageFlipWidget>
     imageData[pageNumber] = null;
   }
 
-  Future goToPage(int index) async {
-    if (mounted) {
-      setState(() {
-        pageNumber = index;
-      });
-    }
+  void fixAnimationDirection(bool aForward) {
     for (var i = 0; i < _controllers.length; i++) {
-      if (i == index) {
-        _controllers[i].forward();
-      } else if (i < index) {
-        _controllers[i].reverse();
+      if (i < pageNumber) {
+        _controllers[i].value = 0.0;
+      } else if (i > pageNumber) {
+        _controllers[i].value = 1.0;
       } else {
-        if (_controllers[i].status == AnimationStatus.reverse) {
-          _controllers[i].value = 1;
-        }
+        _controllers[i].value = aForward ? 1.0 : 0.0;
+      }
+    }
+  }
+
+  Future goToPage(int index) async {
+    if (!mounted) return;
+
+    final isForward = index > pageNumber;
+    fixAnimationDirection(isForward);
+    final targetValue = isForward ? 0.0 : 1.0;
+
+    if (isForward) {
+      for (var i = pageNumber; i < index; i++) {
+        await _controllers[i].animateTo(targetValue,
+            duration: const Duration(milliseconds: 200));
+      }
+    } else {
+      for (var i = pageNumber; i > index; i--) {
+        await _controllers[i].animateTo(targetValue,
+            duration: const Duration(milliseconds: 200));
       }
     }
 
-    if (_isLastPage) {
-      if (widget.onLastPageReached != null) {
-        widget.onLastPageReached!;
-      }
-    }
+    setState(() {
+      pageNumber = index;
+    });
 
+    if (_isLastPage && widget.onLastPageReached != null) {
+      widget.onLastPageReached!();
+    }
     if (widget.onPageChanged != null) {
       widget.onPageChanged!(pageNumber);
     }
-
     if (widget.onJump != null) {
       widget.onJump!(pageNumber - currentPageIndex.value, pageNumber);
     }
